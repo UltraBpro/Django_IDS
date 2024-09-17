@@ -6,6 +6,6 @@ from .models import Alert
 
 class AlertListView(ListView):
     model = Alert
-    template_name = 'IDSWeb/alert_list.html'
+    template_name = 'alert_list.html'
     context_object_name = 'alerts'
     ordering = ['-timestamp']

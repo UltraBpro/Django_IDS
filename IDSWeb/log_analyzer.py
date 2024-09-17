@@ -12,7 +12,7 @@ def analyze_log(log_file_path):
                 continue
             
             # Áp dụng các quy tắc
-            print(line);
+            #print(line);
             alerts = apply_rules(line)
             for alert in alerts:
                 Alert.objects.create(**alert)
