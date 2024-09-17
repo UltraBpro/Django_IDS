@@ -1,0 +1,24 @@
+
+{% block content %}
+  <h1>IDS Alerts</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>Timestamp</th>
+        <th>Attack Type</th>
+        <th>Severity</th>
+        <th>Log Entry</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for alert in alerts %}
+        <tr>
+          <td>{{ alert.timestamp }}</td>
+          <td>{{ alert.attack_type }}</td>
+          <td>{{ alert.severity }}</td>
+          <td>{{ alert.log_entry }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
