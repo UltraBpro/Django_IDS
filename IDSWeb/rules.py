@@ -27,8 +27,32 @@ def apply_rules(log_entry):
     return alerts
 
 def sql_injection(log_entry):
-    pattern = r"(UNION|SELECT|INSERT|UPDATE|DELETE|DROP|TRUNCATE|ALTER|CREATE|TABLE|FROM|WHERE|AND|OR)\s"
-    return bool(re.search(pattern, log_entry, re.IGNORECASE))
+    # Kiểm tra các mẫu SQL injection tiềm ẩn trong toàn bộ log entry
+    suspicious_patterns = [
+        r"(\s|^)UNION(\s|$)",
+        r"(\s|^)OR\s+1\s*=\s*1(\s|$)",
+        r"(\s|^)AND\s+1\s*=\s*1(\s|$)",
+        r"(\s|^)--",
+        r"(\s|^)#",
+        r"(\s|^)\/\*.*?\*\/",
+        r"'(\s|^)OR(\s|$)'",
+        r"'(\s|^)AND(\s|$)'",
+        r"(\s|^)SLEEP\s*\(",
+        r"(\s|^)BENCHMARK\s*\(",
+        r"(\s|^)WAITFOR\s+DELAY",
+    ]
+    
+    for pattern in suspicious_patterns:
+        if re.search(pattern, log_entry, re.IGNORECASE):
+            # Kiểm tra xem mẫu đáng ngờ có nằm trong phần tham số của truy vấn không
+            if "args=" in log_entry:
+                args_start = log_entry.index("args=")
+                if re.search(pattern, log_entry[args_start:], re.IGNORECASE):
+                    return True
+            else:
+                return True
+    
+    return False
 
 def xss_attack(log_entry):
     pattern = r"(<script>|<\/script>|javascript:)"
