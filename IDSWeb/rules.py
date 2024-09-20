@@ -44,7 +44,6 @@ def sql_injection(log_entry):
     
     for pattern in suspicious_patterns:
         if re.search(pattern, log_entry, re.IGNORECASE):
-            # Kiểm tra xem mẫu đáng ngờ có nằm trong phần tham số của truy vấn không
             if "args=" in log_entry:
                 args_start = log_entry.index("args=")
                 if re.search(pattern, log_entry[args_start:], re.IGNORECASE):
@@ -59,7 +58,7 @@ def xss_attack(log_entry):
     return bool(re.search(pattern, log_entry, re.IGNORECASE))
 
 def csrf_attack(log_entry):
-    pattern = r"(Forbidden \(CSRF token (missing|incorrect).*?\)|CSRF verification failed)"
+    pattern = r"(Forbidden \(CSRF cookie|token (missing|incorrect|not set).*?\)|CSRF verification failed)"
     return bool(re.search(pattern, log_entry, re.IGNORECASE))
 
 # Thêm các quy tắc khác tùy theo nhu cầu
