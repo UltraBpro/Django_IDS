@@ -28,7 +28,7 @@ def apply_rules(log_entry):
         alerts.append({
             "log_entry": log_entry,
             "attack_type": "File Upload Vulnerability",
-            "severity": "High"
+            "severity": "Medium"
         })
     # Thêm các quy tắc khác ở đây
     return alerts

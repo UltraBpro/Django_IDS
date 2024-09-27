@@ -11,7 +11,7 @@
           <th>Log Entry</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody id="alertTableBody">
         {% for alert in alerts %}
           <tr>
             <td>{{ alert.timestamp }}</td>
@@ -27,4 +27,47 @@
       </tbody>
     </table>
   </div>
+
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script>
+    let lastAlertId = {{ alerts.first.id|default:0 }};
+
+    function checkForNewAlerts() {
+      $.ajax({
+        url: '{% url "IDSWeb:alert_list" %}',  // Đã thay đổi từ 'alerts' sang 'alert_list'
+        data: { last_id: lastAlertId },
+        headers: {'X-Requested-With': 'XMLHttpRequest'},
+        success: function(data) {
+          if (data.length > 0) {
+            const tableBody = $('#alertTableBody');
+            data.forEach(function(alert) {
+              const row = $('<tr>');
+              row.append($('<td>').text(new Date(alert.timestamp).toLocaleString()));
+              row.append($('<td>').text(alert.attack_type));
+              const severityBadge = $('<span>').addClass('badge').text(alert.severity);
+              if (alert.severity === 'High') {
+                severityBadge.addClass('bg-danger');
+              } else if (alert.severity === 'Medium') {
+                severityBadge.addClass('bg-warning');
+              } else {
+                severityBadge.addClass('bg-info');
+              }
+              row.append($('<td>').append(severityBadge));
+              row.append($('<td>').text(alert.log_entry));
+              tableBody.prepend(row);
+            });
+            lastAlertId = data[data.length - 1].id;
+          }
+          setTimeout(checkForNewAlerts, 1000);  // Check again after 1 second
+        },
+        error: function() {
+          setTimeout(checkForNewAlerts, 5000);  // If error, wait 5 seconds before retrying
+        }
+      });
+    }
+
+    $(document).ready(function() {
+      checkForNewAlerts();
+    });
+  </script>
 {% endblock %}

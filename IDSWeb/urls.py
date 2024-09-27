@@ -1,6 +1,6 @@
 from django.urls import path
 from IDSWeb.views import AlertListView
-
+app_name = 'IDSWeb'
 urlpatterns = [
-    path('alerts/', AlertListView.as_view(), name='alert_list'),
+    path('', AlertListView.as_view(), name='alert_list'),
 ]
