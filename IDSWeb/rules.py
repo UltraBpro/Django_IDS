@@ -30,6 +30,13 @@ def apply_rules(log_entry):
             "attack_type": "File Upload Vulnerability",
             "severity": "Medium"
         })
+    if path_traversal_attack(log_entry):
+        print("Path Traversal Attack")
+        alerts.append({
+            "log_entry": log_entry,
+            "attack_type": "Path Traversal Attack",
+            "severity": "High"
+        })
     # Thêm các quy tắc khác ở đây
     return alerts
 
@@ -94,5 +101,8 @@ def file_upload_vulnerability(log_entry):
     pattern = r'"\w+\s+.*?/media/.*?({})'.format('|'.join(dangerous_extensions))
     return bool(re.search(pattern, log_entry, re.IGNORECASE))
 
+def path_traversal_attack(log_entry):
+    pattern = r'(?:[/\\]\.\.(?:[/\\]|%2f|%5c)|%2e%2e[/\\]|%252e%252e[/\\]|/etc/|c:[/\\]windows|\.(?:log|conf|ini))'
+    return bool(re.search(pattern, log_entry, re.IGNORECASE))
 
 # Thêm các quy tắc khác tùy theo nhu cầu
