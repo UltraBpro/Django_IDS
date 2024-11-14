@@ -1,6 +1,5 @@
 import time
-from .models import Alert
-from .rules import apply_rules
+from .models import Alert, Rule
 
 def analyze_log(log_file_path):
     with open(log_file_path, 'r') as log_file:
@@ -11,8 +10,9 @@ def analyze_log(log_file_path):
                 time.sleep(0.1)  # Đợi nếu không có dữ liệu mới
                 continue
             
-            # Áp dụng các quy tắc
-            #print(line);
-            alerts = apply_rules(line)
+            # Áp dụng các quy tắc từ cơ sở dữ liệu sử dụng hàm apply_rules
+            alerts = Rule.apply_rules(line)
+            
+            # Các đối tượng Alert đã được lưu trong apply_rules, không cần lưu lại
             for alert in alerts:
-                Alert.objects.create(**alert)
+                print(f"Alert created: {alert}")

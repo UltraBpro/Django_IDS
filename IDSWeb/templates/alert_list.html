@@ -2,13 +2,16 @@
 {% block content %}
   <div class="container mt-4">
     <h1 class="mb-4">IDS Alerts</h1>
+    <a href="{% url 'IDSWeb:add_rule' %}" class="btn btn-primary mb-3">Add Rule</a>
     <table class="table table-striped table-hover">
       <thead class="thead-dark">
         <tr>
           <th>Timestamp</th>
           <th>Attack Type</th>
           <th>Severity</th>
+          <th>Source IP</th>
           <th>Log Entry</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody id="alertTableBody">
@@ -21,7 +24,11 @@
                 {{ alert.severity }}
               </span>
             </td>
+            <td>{{ alert.source_ip|default:"Unknown" }}</td>
             <td>{{ alert.log_entry }}</td>
+            <td>
+              <a href="{% url 'IDSWeb:edit_pattern' alert.id %}" class="btn btn-secondary btn-sm">Edit Pattern</a>
+            </td>
           </tr>
         {% endfor %}
       </tbody>
@@ -34,7 +41,7 @@
 
     function checkForNewAlerts() {
       $.ajax({
-        url: '{% url "IDSWeb:alert_list" %}',  // Đã thay đổi từ 'alerts' sang 'alert_list'
+        url: '{% url "IDSWeb:alert_list" %}',  
         data: { last_id: lastAlertId },
         headers: {'X-Requested-With': 'XMLHttpRequest'},
         success: function(data) {
@@ -53,15 +60,21 @@
                 severityBadge.addClass('bg-info');
               }
               row.append($('<td>').append(severityBadge));
+              row.append($('<td>').text(alert.source_ip || 'Unknown'));
               row.append($('<td>').text(alert.log_entry));
+              const editButton = $('<a>')
+                .addClass('btn btn-secondary btn-sm')
+                .attr('href', `/edit-pattern/${alert.id}/`)
+                .text('Edit Pattern');
+              row.append($('<td>').append(editButton));
               tableBody.prepend(row);
             });
             lastAlertId = data[data.length - 1].id;
           }
-          setTimeout(checkForNewAlerts, 1000);  // Check again after 1 second
+          setTimeout(checkForNewAlerts, 1000);
         },
         error: function() {
-          setTimeout(checkForNewAlerts, 5000);  // If error, wait 5 seconds before retrying
+          setTimeout(checkForNewAlerts, 5000);
         }
       });
     }

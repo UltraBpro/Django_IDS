@@ -1,0 +1,11 @@
+{% block content %}
+  <div class="container mt-4">
+    <h1>Edit Pattern for Rule: {{ alert.attack_type }}</h1>
+    <form method="post">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+      <a href="{% url 'IDSWeb:alert_list' %}" class="btn btn-secondary">Cancel</a>
+    </form>
+  </div>
+{% endblock %}
