@@ -48,7 +48,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'IDSWeb.middleware.RequestIPMiddleware',
 ]
 
 ROOT_URLCONF = 'Django_IDS.urls'
