@@ -2,12 +2,83 @@
 {% block content %}
   <div class="container mt-4">
     <h1 class="mb-4">IDS Alerts</h1>
+
+    <!-- Thêm form filter -->
+    <div class="card mb-4">
+      <div class="card-body">
+        <form method="get" class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label">Attack Type</label>
+            <select name="attack_type" class="form-select">
+              <option value="">All</option>
+              {% for type in attack_types %}
+                <option value="{{ type }}" {% if request.GET.attack_type == type %}selected{% endif %}>
+                  {{ type }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div class="col-md-3">
+            <label class="form-label">Severity</label>
+            <select name="severity" class="form-select">
+              <option value="">All</option>
+              {% for severity in severities %}
+                <option value="{{ severity }}" {% if request.GET.severity == severity %}selected{% endif %}>
+                  {{ severity }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div class="col-md-3">
+            <label class="form-label">Start Date</label>
+            <input type="datetime-local" name="start_date" class="form-control" 
+                   value="{{ request.GET.start_date }}">
+          </div>
+          
+          <div class="col-md-3">
+            <label class="form-label">End Date</label>
+            <input type="datetime-local" name="end_date" class="form-control"
+                   value="{{ request.GET.end_date }}">
+          </div>
+          
+          <div class="col-12">
+            <button type="submit" class="btn btn-primary">Filter</button>
+            <a href="{% url 'IDSWeb:alert_list' %}" class="btn btn-secondary">Reset</a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Add this CSS in the header or in a style tag -->
+    <style>
+      .sortable {
+        cursor: pointer;
+      }
+      .sortable::after {
+        content: '↕️';
+        margin-left: 5px;
+        opacity: 0.3;
+      }
+      .sortable.asc::after {
+        content: '↑';
+        opacity: 1;
+      }
+      .sortable.desc::after {
+        content: '↓';
+        opacity: 1;
+      }
+    </style>
+
     <table class="table table-striped table-hover">
       <thead class="thead-dark">
         <tr>
-          <th>Timestamp</th>
+          <th class="sortable" data-sort="timestamp" 
+              data-current="{{ current_sort }}">Timestamp</th>
           <th>Attack Type</th>
           <th>Severity</th>
+          <th>IP Address</th>
           <th>Log Entry</th>
         </tr>
       </thead>
@@ -21,6 +92,7 @@
                 {{ alert.severity }}
               </span>
             </td>
+            <td>{{ alert.ip_address|default:"-" }}</td>
             <td>{{ alert.log_entry }}</td>
           </tr>
         {% endfor %}
@@ -32,10 +104,51 @@
   <script>
     let lastAlertId = {{ alerts.first.id|default:0 }};
 
+    $(document).ready(function() {
+      $('.sortable').each(function() {
+        const field = $(this).data('sort');
+        const currentSort = $(this).data('current');
+        
+        if (currentSort === field) {
+          $(this).addClass('asc');
+        } else if (currentSort === '-' + field) {
+          $(this).addClass('desc');
+        }
+      });
+
+      $('.sortable').click(function() {
+        const field = $(this).data('sort');
+        const currentSort = $(this).data('current');
+        let newSort = field;
+
+        if (currentSort === field) {
+          newSort = '-' + field;
+        } else if (currentSort === '-' + field) {
+          newSort = field;
+        }
+
+        // Get current URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.set('sort', newSort);
+        
+        // Preserve filter parameters
+        window.location.search = urlParams.toString();
+      });
+    });
+
     function checkForNewAlerts() {
       $.ajax({
-        url: '{% url "IDSWeb:alert_list" %}',  // Đã thay đổi từ 'alerts' sang 'alert_list'
-        data: { last_id: lastAlertId },
+        url: '{% url "IDSWeb:alert_list" %}',
+        data: { 
+          last_id: lastAlertId,
+          attack_type: $('select[name="attack_type"]').val(),
+          severity: $('select[name="severity"]').val(),
+          start_date: $('input[name="start_date"]').val(),
+          end_date: $('input[name="end_date"]').val(),
+          sort: $('.sortable').filter(function() {
+            return $(this).hasClass('asc') || $(this).hasClass('desc');
+          }).data('sort')
+        },
         headers: {'X-Requested-With': 'XMLHttpRequest'},
         success: function(data) {
           if (data.length > 0) {
@@ -53,15 +166,16 @@
                 severityBadge.addClass('bg-info');
               }
               row.append($('<td>').append(severityBadge));
+              row.append($('<td>').text(alert.ip_address || '-'));
               row.append($('<td>').text(alert.log_entry));
               tableBody.prepend(row);
             });
             lastAlertId = data[data.length - 1].id;
           }
-          setTimeout(checkForNewAlerts, 1000);  // Check again after 1 second
+          setTimeout(checkForNewAlerts, 1000);
         },
         error: function() {
-          setTimeout(checkForNewAlerts, 5000);  // If error, wait 5 seconds before retrying
+          setTimeout(checkForNewAlerts, 5000);
         }
       });
     }
