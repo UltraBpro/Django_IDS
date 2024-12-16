@@ -11,6 +11,32 @@ from django.views.generic import ListView, CreateView, DeleteView
 from django.urls import reverse_lazy
 import json
 from datetime import datetime
+import subprocess
+import os
+import signal
+from django.http import JsonResponse
+from django.conf import settings
+import atexit
+import platform
+
+# Biến global để lưu process ID
+current_process = None
+
+def cleanup_process():
+    """Hàm cleanup được gọi khi server shutdown"""
+    global current_process
+    if current_process:
+        try:
+            if platform.system() == 'Windows':
+                subprocess.run(['taskkill', '/F', '/T', '/PID', str(current_process)])
+            else:
+                os.killpg(os.getpgid(current_process), signal.SIGTERM)
+            print(f"Cleaned up IDS process {current_process}")
+        except:
+            pass
+
+# Đăng ký hàm cleanup để chạy khi server shutdown
+atexit.register(cleanup_process)
 
 # Create your views here.
 
@@ -152,3 +178,55 @@ def import_rules(request):
         return JsonResponse({'error': 'Invalid JSON file'}, status=400)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+def start_ids(request):
+    global current_process
+    if current_process:
+        return JsonResponse({'status': 'error', 'message': 'IDS is already running'})
+    
+    source = request.POST.get('source')
+    mode = request.POST.get('mode', 'file')
+    
+    if not source:
+        return JsonResponse({'status': 'error', 'message': 'Source path/URL is required'})
+    
+    try:
+        # Chạy command với argument tương ứng
+        if mode == 'file':
+            process = subprocess.Popen(['python', 'manage.py', 'run_ids', '-f', source])
+        else:  # stream
+            process = subprocess.Popen(['python', 'manage.py', 'run_ids', '-s', source])
+            
+        current_process = process.pid
+        return JsonResponse({
+            'status': 'success', 
+            'message': f'IDS started successfully in {mode} mode'
+        })
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+def stop_ids(request):
+    global current_process
+    if not current_process:
+        return JsonResponse({'status': 'error', 'message': 'IDS is not running'})
+    
+    try:
+        if platform.system() == 'Windows':
+            # Sử dụng taskkill trên Windows để kill process tree
+            subprocess.run(['taskkill', '/F', '/T', '/PID', str(current_process)])
+        else:
+            # Sử dụng killpg trên Unix/Linux
+            os.killpg(os.getpgid(current_process), signal.SIGTERM)
+            
+        current_process = None
+        return JsonResponse({'status': 'success', 'message': 'IDS stopped successfully'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+def get_ids_status(request):
+    global current_process
+    is_running = current_process is not None
+    return JsonResponse({
+        'status': 'running' if is_running else 'stopped',
+        'pid': current_process
+    })

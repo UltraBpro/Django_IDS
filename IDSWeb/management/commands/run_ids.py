@@ -1,13 +1,30 @@
 from django.core.management.base import BaseCommand
-from IDSWeb.log_analyzer import analyze_log
+from IDSWeb.log_analyzer import analyze_log, analyze_stream
 
 class Command(BaseCommand):
-    help = 'Runs the IDS log analyzer'
+    help = 'Runs the IDS log analyzer with file or stream source'
 
     def add_arguments(self, parser):
-        parser.add_argument('log_file', type=str, help='Path to the log file')
+        group = parser.add_mutually_exclusive_group(required=True)
+        group.add_argument(
+            '-f', 
+            '--file',
+            type=str,
+            help='Path to the log file'
+        )
+        group.add_argument(
+            '-s',
+            '--stream',
+            type=str,
+            help='URL of the log stream'
+        )
 
     def handle(self, *args, **options):
-        log_file = options['log_file']
-        self.stdout.write(self.style.SUCCESS(f'Starting IDS analysis on {log_file}'))
-        analyze_log(log_file)
+        if options['file']:
+            source = options['file']
+            self.stdout.write(self.style.SUCCESS(f'Starting IDS analysis on file: {source}'))
+            analyze_log(source)
+        elif options['stream']:
+            source = options['stream']
+            self.stdout.write(self.style.SUCCESS(f'Starting IDS analysis on stream: {source}'))
+            analyze_stream(source)

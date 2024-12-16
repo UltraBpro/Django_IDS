@@ -1,7 +1,42 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
 {% block content %}
   <div class="container mt-4">
-    <h1 class="mb-4">IDS Alerts</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>IDS Alerts</h1>
+        <div class="d-flex gap-2">
+            <a href="{% url 'IDSWeb:rule_list' %}" class="btn btn-primary">Manage Rules</a>
+            
+            <!-- IDS Control Panel -->
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">IDS Control</h5>
+                    <div class="mb-3">
+                        <!-- Mode Switch -->
+                        <div class="form-check form-check-inline mb-3">
+                            <input class="form-check-input" type="radio" name="idsMode" id="fileMode" value="file" checked>
+                            <label class="form-check-label" for="fileMode">File Mode</label>
+                        </div>
+                        <div class="form-check form-check-inline mb-3">
+                            <input class="form-check-input" type="radio" name="idsMode" id="streamMode" value="stream">
+                            <label class="form-check-label" for="streamMode">Stream Mode</label>
+                        </div>
+                        
+                        <!-- Input Group -->
+                        <div class="input-group">
+                            <input type="text" id="sourceInput" class="form-control" 
+                                   placeholder="Enter file path">
+                            <button class="btn btn-success" id="startIDS">Start</button>
+                            <button class="btn btn-danger" id="stopIDS" disabled>Stop</button>
+                        </div>
+                        <small id="sourceHelp" class="form-text text-muted">
+                            Enter the path to your log file
+                        </small>
+                    </div>
+                    <div id="statusMessage" class="text-muted small"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Thêm form filter -->
     <div class="card mb-4">
@@ -183,5 +218,93 @@
     $(document).ready(function() {
       checkForNewAlerts();
     });
+
+    function updateIDSStatus() {
+        fetch('{% url "IDSWeb:ids_status" %}')
+            .then(response => response.json())
+            .then(data => {
+                const startBtn = document.getElementById('startIDS');
+                const stopBtn = document.getElementById('stopIDS');
+                const statusMsg = document.getElementById('statusMessage');
+                
+                if (data.status === 'running') {
+                    startBtn.disabled = true;
+                    stopBtn.disabled = false;
+                    statusMsg.textContent = `Running (PID: ${data.pid})`;
+                } else {
+                    startBtn.disabled = false;
+                    stopBtn.disabled = true;
+                    statusMsg.textContent = 'Stopped';
+                }
+            });
+    }
+
+    // Update placeholder and help text based on selected mode
+    document.querySelectorAll('input[name="idsMode"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const sourceInput = document.getElementById('sourceInput');
+            const sourceHelp = document.getElementById('sourceHelp');
+            
+            if (this.value === 'file') {
+                sourceInput.placeholder = 'Enter file path';
+                sourceHelp.textContent = 'Enter the path to your log file';
+            } else {
+                sourceInput.placeholder = 'Enter stream URL';
+                sourceHelp.textContent = 'Enter the URL of the log stream';
+            }
+        });
+    });
+
+    // Update start IDS function
+    document.getElementById('startIDS').addEventListener('click', function() {
+        const source = document.getElementById('sourceInput').value;
+        const mode = document.querySelector('input[name="idsMode"]:checked').value;
+        
+        if (!source) {
+            alert('Please enter ' + (mode === 'file' ? 'file path' : 'stream URL'));
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('source', source);
+        formData.append('mode', mode);
+
+        fetch('{% url "IDSWeb:start_ids" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'error') {
+                alert(data.message);
+            } else {
+                updateIDSStatus();
+            }
+        });
+    });
+
+    document.getElementById('stopIDS').addEventListener('click', function() {
+        fetch('{% url "IDSWeb:stop_ids" %}', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'error') {
+                alert(data.message);
+            } else {
+                updateIDSStatus();
+            }
+        });
+    });
+
+    // Check status periodically
+    setInterval(updateIDSStatus, 5000);
+    updateIDSStatus(); // Initial check
   </script>
 {% endblock %}
